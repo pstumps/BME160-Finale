@@ -60,7 +60,7 @@ class DendroHeat:
             self.reversetree[y] = x
             self.forwardtree[x].append(y)
         
-    def createHeatmap (self, addHoverTool=True):
+    def _createHeatmap (self, addHoverTool=True):
         if not self.heatsource:
             return
         
@@ -82,7 +82,7 @@ class DendroHeat:
 
         self.heatmap = hm
     
-    def createDendrogram (self, addHoverTool=True):
+    def _createDendrogram (self, addHoverTool=True):
         pass
     
     def show (self, output='notebook', heatmap=True, dendrogram=False):
@@ -104,6 +104,6 @@ class DendroHeat:
             show(self.heatmap)
         elif dendrogram:
             show(self.dendrogram)
-        elif heatmpa and dendrogram:
+        elif heatmap and dendrogram:
             #combine and show
             pass
