@@ -51,6 +51,7 @@ class DendroHeat:
             alpha = []
             value = []
 
+            #Instantiates data from excel file to a pandas dataframe for use by bokeh.
             for i, m in enumerate(df.index):
                 name = name + [m]*len(df.columns)
                 attribute = attribute + df.columns.tolist()
@@ -60,26 +61,26 @@ class DendroHeat:
                 value = value + df.loc[m].tolist()
                 alpha = alpha + ndf.loc[m].tolist()
 
-            self.data = dict(name = name, attribute = attribute, colors = colors, xs = xs, ys = ys, value = value, alpha = alpha)
+            self.data = pd.DataFrame(dict(name = name, attribute = attribute, colors = colors, xs = xs, ys = ys, value = value, alpha = alpha))
             self.source = ColumnDataSource(self.data)
             self.heatmap = df
 
+        #Performs clustering of a user provided distance matrix if desired.
         if type == "cluster":
             self.cluster = df
-            X = pairwise_distances(self.cluster, metric= 'euclidean')
-            Z = linkage(X, method='complete')
+            X = pairwise_distances(self.cluster, metric='euclidean')
+            Z = linkage(X, method='ward')
             dendro = dendrogram(Z, no_plot=True)
             self.icoord, self.dcoord = dendro['icoord'], dendro['dcoord']
-            self.heatmap = self.heatmap.loc[dendro['ivl']]
+            self.heatmap = self.heatmap.iloc[dendro['ivl']]
     
     def _cluster(self, parent_col='parent', child_col='child'):
         '''No cluster data was given, so cluster the data.'''
-        X = pairwise_distances(self.heatmap.fillna(0), metric= 'euclidean')
-        Z = linkage(X, method='complete')
+        X = pairwise_distances(self.heatmap.fillna(0), metric='euclidean')
+        Z = linkage(X, method='ward')
         dendro = dendrogram(Z, no_plot=True)
         self.icoord, self.dcoord = dendro['icoord'], dendro['dcoord']
-        labels = list(map(int, dendro['ivl']))
-        self.dendroData = self.heatmap.iloc[labels]
+        self.dendroData = self.heatmap.iloc[dendro['ivl']]
         
     def _createHeatmap (self, tool=True):
         '''Create the Heatmap'''
@@ -89,6 +90,7 @@ class DendroHeat:
 
         hm = figure(x_range=self.heatmap.columns.tolist(), y_range=[0, self.heatmap.shape[0]])
 
+        #Creates hover tool from heatmap data
         if tool:
             hover = HoverTool(names=['Heatmap'])
             hover.tooltips = [("Name", "@name"), ("Attribute", "@attribute"), ("Value", "@value")]
@@ -96,6 +98,7 @@ class DendroHeat:
         
         hm.rect(x='xs', y='ys', height=1, width=1, source=self.source, fill_alpha='alpha', line_alpha=0.1, name='Heatmap', fill_color='colors')
 
+        #Some housekeeping to clean heatmap axes and labels
         hm.xaxis.major_label_orientation = pi/2
         hm.xaxis.major_label_text_font_size = '7pt'
         hm.axis.major_tick_line_color = None
@@ -106,6 +109,10 @@ class DendroHeat:
         self.heatmap = hm
     
     def _createDendrogram(self):
+        '''
+        Creates dendrogram based off of the i coordinates and d coordinates provided by scipy's dendrogram dictionary. 
+        Uses bokeh to create lines on the heatmap based off of the values of these coordinates.
+        '''
         self.icoord = pd.DataFrame(self.icoord)
         self.dcoord = pd.DataFrame(self.dcoord)
         self.icoord = self.icoord*(self.data['ys'].max()/self.icoord.max().max())  
@@ -115,30 +122,7 @@ class DendroHeat:
 
         for i, d in zip(ycoord, xcoord):
             d = list(map(lambda x: -x, d))
-            self.heatmap.line(x=d, y=i, line_color = 'black', name='denhover')
-
-        # if addDendroHoverTool:
-        #     parent = []
-        #     children = []
-        #     denvalue = []
-        #     #This will be for the dendrogram hover tool when I can figure out how the hell it works
-        #     ldf = pd.DataFrame()
-
-        #     for i, n in enumerate(ldf.index):
-        #         parent = parent + [n]*len(ldf.columns)
-        #         children = children + ldf.columns.tolist()
-        #         denvalue = denvalue + ldf.loc[n].tolist()
-
-        #     denData = pd.DataFrame(dict(
-        #         parent = parent,
-        #         children = children,
-        #         denvalue = denvalue
-        #     ))
-
-        #     denhover = HoverTool(names=['denhover'])
-        #     denhover.tooltips = [("Parent", "@parent"), ("Children", "@children"), ("Value", "@denvalue")]
-        #     hm.add_tools(denhover)
-            #hm.line(x=d, y=i, line_color = 'black', name='denhover') #we'll need this somewhere if we get the dendrogram up and running in order to add a hovertool for the dendrogram
+            self.heatmap.line(x=d, y=i,  line_width = 0.2, line_color = 'black', name='denhover')
 
     def show(self, output='html', heatmap=True, dendrogram=True):
         '''Outputs the Heatmap and Dendrogram'''
@@ -185,9 +169,6 @@ class CommandLine():
         self.parser.add_argument('raw', action = 'store', help='Heatmap data file')
         self.parser.add_argument('cluster', action = 'store', nargs='?', default='', help='Provide own clustering data or distance matrix for dendrogram creation.')
         self.parser.add_argument('-v, --version', action='version', version='%(prog)s 0.2')
-        # self.parser.add_argument('--HMtt', action = 'store', default=True, help='Specify if you would like a hoverTool tooltip display for your heatmap.')
-        # self.parser.add_argument('-hmht', action = 'store', default=False, nargs='?', help='Specify designated height you would like for Heatmap figure if desired. (If you generated a heatmap before and did not like the height, you can edit that here. Note: This will interfere with the axis when panning.)')
-        # self.parser.add_argument('-hmwd', action = 'store', default=False, nargs='?', help='Specify designated width you would like for the heatmap figure if desired. (If you generated a heatmap before and did not like the width, you can edit that here. Note: This will interfere with the axis when panning.)')
 
         self.args = self.parser.parse_args(inOpts)
         
