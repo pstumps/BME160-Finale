@@ -7,6 +7,6 @@ This program will cluster a user provided distance matrix using matplotlib to cr
 
 If you would like to see a demonstration of this program, see the "Demonstration" folder and run the bash script. If you would like to use this program for your own data, usage of this program is as follows:
 
-Input:python DendroHeat.py [heatmap data].xlsx [distancematrix].xlsx
+Input: python DendroHeat.py [heatmap data].xlsx [distancematrix].xlsx
 
 Output: HTML file of Heatmap with dendrogram.
